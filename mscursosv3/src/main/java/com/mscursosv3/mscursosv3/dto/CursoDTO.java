@@ -10,7 +10,7 @@ public class CursoDTO {
     private String nombreCurso;
     private String descCurso;
     private int cantMaxParticipantes;
-    private Boolean cursoActivo;
+    private Boolean estadoCurso;
     private Date fechaCreacion;
 }
 

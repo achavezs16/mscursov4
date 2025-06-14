@@ -17,7 +17,7 @@ public class CursoToCursoDTOConverter implements Converter<Curso, CursoDTO>{
         dto.setNombreCurso(curso.getNombreCurso());
         dto.setDescCurso(curso.getDescCurso());
         dto.setCantMaxParticipantes(curso.getCantMaxParticipantes());
-        dto.setCursoActivo(curso.getEstadoCurso());
+        dto.setEstadoCurso(curso.getEstadoCurso());
         dto.setFechaCreacion(curso.getFechaCreacion());
         return dto;
     }
