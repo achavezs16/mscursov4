@@ -2,6 +2,7 @@ package com.mscursosv3.mscursosv3.controller;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -10,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 import org.junit.jupiter.api.Test;
@@ -45,9 +47,15 @@ public class CursoControllerTest {
     private CursoToCursoDTOConverter cursoDTOConverter;
 
     @Test
-    void inscribirCurso_DeberiaRetornar200() throws Exception{
+    void debeRetornarMensajeStatus() throws Exception{
+        mockMvc.perform(get("/api/v2/cursos/status"))
+            .andExpect(status().isOk())
+            .andExpect(content().string("Gestión de Curso-API está conectado! 🙌"));
+    }
 
-        ObjectMapper objectMapper = new ObjectMapper();
+
+    @Test
+    void inscribirCurso_DeberiaRetornar200() throws Exception{
 
         //Given
         Curso curso1 = new Curso();
@@ -56,9 +64,10 @@ public class CursoControllerTest {
         curso1.setCantMaxParticipantes(50);
         curso1.setEstadoCurso(true);
 
+        ObjectMapper objectMapper = new ObjectMapper();
         String body = objectMapper.writeValueAsString(curso1);
 
-        when(cursoService.crearCurso(curso1)).thenReturn(new Curso());
+        when(cursoService.crearCurso(any(Curso.class))).thenReturn(curso1);
 
         //Then
         mockMvc.perform(post("/api/v2/cursos/creacionCurso")
