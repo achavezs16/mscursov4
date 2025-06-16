@@ -22,11 +22,9 @@ public class CursoService {
     private final CursoToCursoDTOConverter cursoToCursoDTOConverter;
 
     public CursoDTO buscarCursoPorId(Long idCurso){
-        Curso curso = cursoRepository.findById(idCurso).orElse(null);
-        if (curso != null) {
-            return cursoToCursoDTOConverter.convert(curso);
-        }
-        return null;
+        return cursoRepository.findById(idCurso)
+                .map(cursoToCursoDTOConverter::convert)
+                .orElse(null);
     }
 
     public List<CursoDTO> listarTodosCursos(){
@@ -50,6 +48,10 @@ public class CursoService {
             return cursoRepository.save(curso);
         }
         return null;
+    }
+
+    public Curso obtenerCursoPorId(Long idCurso){
+        return cursoRepository.findById(idCurso).orElse(null);
     }
 
     public void eliminarPorIdCurso(Long idCurso){
