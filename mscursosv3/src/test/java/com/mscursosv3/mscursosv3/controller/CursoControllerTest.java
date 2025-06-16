@@ -1,34 +1,25 @@
 package com.mscursosv3.mscursosv3.controller;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import java.util.ArrayList;
 import java.util.List;
 
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-
 import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mscursosv3.mscursosv3.dto.CursoDTO;
-import com.mscursosv3.mscursosv3.dto.CursoToCursoDTOConverter;
 import com.mscursosv3.mscursosv3.exception.CursoNoEncontradoException;
 import com.mscursosv3.mscursosv3.model.Curso;
-import com.mscursosv3.mscursosv3.repository.CursoRepository;
 import com.mscursosv3.mscursosv3.service.CursoService;
 
 @WebMvcTest(CursoController.class)
@@ -39,12 +30,6 @@ public class CursoControllerTest {
 
     @MockitoBean
     private CursoService cursoService;
-
-    @MockitoBean
-    private CursoRepository cursoRepository;
-
-    @MockitoBean
-    private CursoToCursoDTOConverter cursoDTOConverter;
 
     @Test
     void debeRetornarMensajeStatus() throws Exception{
@@ -79,40 +64,35 @@ public class CursoControllerTest {
     @Test
     void buscarCurso_DeberiaRetornar200() throws Exception{
 
-        ObjectMapper objectMapper = new ObjectMapper();
-
         //Given
+        Long idCurso = 1L;
         CursoDTO cursoDTO = new CursoDTO();
-        String body = objectMapper.writeValueAsString(cursoDTO);
+        cursoDTO.setIdCurso(idCurso);
+        cursoDTO.setNombreCurso("Curso de Prueba");
 
-        when(cursoService.buscarCursoPorId(null)).thenReturn(new CursoDTO());
+        when(cursoService.buscarCursoPorId(idCurso)).thenReturn(cursoDTO);
 
-        //Then
-        mockMvc.perform(get("/api/v2/cursos/{idCurso}")
-                        .content(body)
-                        .contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(status().isOk());
+        //When / then
+        mockMvc.perform(get("/api/v2/cursos/{idCurso}", idCurso)
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk());
+
     }
 
     @Test
     void buscarCurso_CursoNOEXISTE_DeberiaRetornarNullYMensajeError() throws Exception{
 
-        ObjectMapper objectMapper = new ObjectMapper();
-
         //Given
-        CursoDTO cursoDTO = new CursoDTO();
-        CursoNoEncontradoException cursoNoEncontradoException = new CursoNoEncontradoException("Curso buscado no existe: " + cursoDTO.getClass());
+        Long idCursoInexistente = 999L;
 
-        String body = objectMapper.writeValueAsString(cursoDTO);
+        when(cursoService.buscarCursoPorId(idCursoInexistente))
+            .thenThrow(new CursoNoEncontradoException("Curso consultado no encontrado: " + idCursoInexistente));
 
-        when(cursoService.buscarCursoPorId(null)).thenThrow(cursoNoEncontradoException);
 
-        //Then
-        mockMvc.perform(get("/api/v2/cursos/{idCurso}")
-                        .content(body)
-                        .contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(status().is(400))
-                    .andExpect(jsonPath("$detalle").value("Curso consultado no encontrado: null"));
+        mockMvc.perform(get("/api/v2/cursos/{idCurso}", idCursoInexistente)
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.detalle").value("Curso consultado no encontrado: " + idCursoInexistente));
         
 
     }
@@ -120,55 +100,35 @@ public class CursoControllerTest {
     @Test
     void listarCursos_FullLista_DeberiaRetornarDatos() throws Exception{
 
-        //ObjectMapper objectMapper = new ObjectMapper();
-
-        //Given
         String URI = "/api/v2/cursos/listarCursos";
 
-        //Mock Data
-        Curso curso1 = new Curso();
-        curso1.setNombreCurso("Desarrollo FullStack I");
-        curso1.setDescCurso("Nivel Principiante");
-        curso1.setCantMaxParticipantes(50);
-        curso1.setEstadoCurso(true);
-
-        Curso curso2 = new Curso();
-        curso2.setNombreCurso("Desarrollo FullStack II");
-        curso2.setDescCurso("Nivel Intermedio");
-        curso2.setCantMaxParticipantes(70);
-        curso2.setEstadoCurso(true);
-
         CursoDTO cursoDTO1 = new CursoDTO();
-        cursoDTO1.setNombreCurso("Desarrollo FullStack I DTO");
-        cursoDTO1.setDescCurso("Nivel Principiante DTO");
+        cursoDTO1.setNombreCurso("Desarrollo Fullstack I");
+        cursoDTO1.setDescCurso("Nivel Principiante");
         cursoDTO1.setCantMaxParticipantes(50);
         cursoDTO1.setEstadoCurso(true);
 
         CursoDTO cursoDTO2 = new CursoDTO();
-        cursoDTO2.setNombreCurso("Desarrollo FullStack II DTO");
-        cursoDTO2.setDescCurso("Nivel Intermedio DTO");
+        cursoDTO2.setNombreCurso("Desarrollo Fullstack II");
+        cursoDTO2.setDescCurso("Nivel Intermedio");
         cursoDTO2.setCantMaxParticipantes(70);
-        cursoDTO2.setEstadoCurso(true);
+        cursoDTO2.setEstadoCurso(true);        
 
-        List<CursoDTO> cursoDTOLista = new ArrayList<>();
-        cursoDTOLista.add(cursoDTO1);
-        cursoDTOLista.add(cursoDTO2);
+        CursoDTO cursoDTO3 = new CursoDTO();
+        cursoDTO3.setNombreCurso("Taller de Proyectos Fullstack");
+        cursoDTO3.setDescCurso("Nivel Avanzado");
+        cursoDTO3.setCantMaxParticipantes(30);
+        cursoDTO3.setEstadoCurso(false);  
 
-        //Mock services responses
-        when(cursoService.listarTodosCursos()).thenReturn(List.of(cursoDTO1));
-        when(cursoDTOConverter.convert(curso1)).thenReturn(cursoDTO1);
-        when(cursoDTOConverter.convert(curso2)).thenReturn(cursoDTO2);
+        List<CursoDTO> cursoDTOLista = List.of(cursoDTO1, cursoDTO2, cursoDTO3);
 
-        //When
-        MvcResult response = mockMvc.perform(get(URI)).andReturn();
+        when(cursoService.listarTodosCursos()).thenReturn(cursoDTOLista);
 
-        int responseStatus = response.getResponse().getStatus();
-        String responseBody = response.getResponse().getContentAsString();
-        
-        assertEquals(HttpStatus.OK.value(), responseStatus, "STATUS SHOULD BE 200");
-        assertTrue(responseBody.contains("Desarrollo Fullstack I DTO"), "RESPONSE BODY SHOULD CONTAIN 'DESARROLLO FULLSTACK I DTO'");
-        
-
+        mockMvc.perform(get(URI))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].nombreCurso").value("Desarrollo Fullstack I"))
+                .andExpect(jsonPath("$[1].nombreCurso").value("Desarrollo Fullstack II"))
+                .andExpect(jsonPath("$[2].nombreCurso").value("Taller de Proyectos Fullstack"));
 
     }
 
