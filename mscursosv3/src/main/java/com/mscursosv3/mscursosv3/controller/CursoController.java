@@ -43,8 +43,7 @@ public class CursoController {
         try {
             List<CursoDTO> cursosDTO = cursoService.listarTodosCursos();
             if (cursosDTO.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NO_CONTENT)
-                        .body("No hay cursos disponibles");
+                return ResponseEntity.noContent().build();
             }
             return ResponseEntity.ok(cursosDTO);
         } catch (Exception e) {

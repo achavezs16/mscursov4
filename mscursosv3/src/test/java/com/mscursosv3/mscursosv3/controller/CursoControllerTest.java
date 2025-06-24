@@ -1,5 +1,6 @@
 package com.mscursosv3.mscursosv3.controller;
 
+import java.util.Collections;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -143,6 +144,19 @@ public class CursoControllerTest {
                 .andExpect(jsonPath("$[0].nombreCurso").value("Desarrollo Fullstack I"))
                 .andExpect(jsonPath("$[1].nombreCurso").value("Desarrollo Fullstack II"))
                 .andExpect(jsonPath("$[2].nombreCurso").value("Taller de Proyectos Fullstack"))
+                .andDo(print());
+
+    }
+
+    @Test
+    void listarCurso_ListaVacia_DeberiaRetornar204SinContenido() throws Exception {
+        String URI = "/api/v2/cursos/listarCurso1";
+
+        when(cursoService.listarTodosCursos()).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get(URI))
+                .andExpect(status().isNoContent())
+                .andExpect(content().string(""))
                 .andDo(print());
 
     }
