@@ -8,12 +8,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -22,28 +23,31 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mscursosv3.mscursosv3.dto.CursoDTO;
 import com.mscursosv3.mscursosv3.exception.CursoNoEncontradoException;
+import com.mscursosv3.mscursosv3.exception.GlobalExceptionHandler;
 import com.mscursosv3.mscursosv3.model.Curso;
 import com.mscursosv3.mscursosv3.service.CursoService;
 
 @WebMvcTest(CursoController.class)
+@Import(GlobalExceptionHandler.class)
 public class CursoControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
-    @MockitoBean
+    @MockBean
     private CursoService cursoService;
 
     @Test
     void debeRetornarMensajeStatus() throws Exception{
         mockMvc.perform(get("/api/v2/cursos/status"))
             .andExpect(status().isOk())
-            .andExpect(content().string("Gestión de Curso-API está conectado! 🙌"));
+            .andExpect(content().string("Gestión de Curso-API está conectado! 🙌"))
+            .andDo(print());
     }
 
 
     @Test
-    void inscribirCurso_DeberiaRetornar200() throws Exception{
+    void inscribirCurso_DeberiaRetornar201() throws Exception{
 
         //Given
         Curso curso1 = new Curso();
@@ -58,22 +62,11 @@ public class CursoControllerTest {
         when(cursoService.crearCurso(any(Curso.class))).thenReturn(curso1);
 
         //Then
-        //mockMvc.perform(post("/api/v2/cursos/creacionCurso1")
-        //               .content(body)
-        //                .contentType(MediaType.APPLICATION_JSON))
-        //        .andExpect(status().isCreated())
-        //        .andDo(print());     
-                
-                
-        MvcResult result = mockMvc.perform(post("/api/v2/cursos/creacionCurso1")
-                    .content(body)
-                    .contentType(MediaType.APPLICATION_JSON))
-            .andExpect(status().isCreated())
-            .andReturn();
-
-            String responseBody = result.getResponse().getContentAsString();
-            System.out.println("Respuesta del controlador: " + responseBody);
-
+        mockMvc.perform(post("/api/v2/cursos/creacionCurso1")
+                        .content(body)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated())
+                .andDo(print());     
     }
 
     @Test
@@ -90,8 +83,8 @@ public class CursoControllerTest {
         //When / then
         mockMvc.perform(get("/api/v2/cursos/{idCurso}", idCurso)
                 .contentType(MediaType.APPLICATION_JSON))
-            .andExpect(status().isOk());
-
+            .andExpect(status().isOk())
+            .andDo(print());
     }
 
     @Test
@@ -107,9 +100,8 @@ public class CursoControllerTest {
         mockMvc.perform(get("/api/v2/cursos/{idCurso}", idCursoInexistente)
                 .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isNotFound())
-            .andExpect(jsonPath("$.detalle").value("Curso consultado no encontrado: " + idCursoInexistente));
-        
-
+            .andExpect(jsonPath("$.detalle").value("Curso consultado no encontrado: " + idCursoInexistente))
+            .andDo(print());
     }
 
     @Test
@@ -150,7 +142,7 @@ public class CursoControllerTest {
 
     @Test
     void listarCurso_ListaVacia_DeberiaRetornar204SinContenido() throws Exception {
-        String URI = "/api/v2/cursos/listarCurso1";
+        String URI = "/api/v2/cursos/listarCursos1";
 
         when(cursoService.listarTodosCursos()).thenReturn(Collections.emptyList());
 
@@ -159,6 +151,70 @@ public class CursoControllerTest {
                 .andExpect(content().string(""))
                 .andDo(print());
 
+    }
+
+    @Test
+    void modificarCurso_Exitoso_DeberiaRetornar200YCursoActualizado() throws Exception {
+        Long idCurso = 1L;
+        Curso cursoEnviado = new Curso();
+        cursoEnviado.setNombreCurso("Curso Modificado");
+        cursoEnviado.setDescCurso("Actualizado");
+        cursoEnviado.setCantMaxParticipantes(100);
+        cursoEnviado.setEstadoCurso(true);
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        String body = objectMapper.writeValueAsString(cursoEnviado);
+
+        when(cursoService.actualizarCurso(idCurso, cursoEnviado)).thenReturn(cursoEnviado);
+
+        mockMvc.perform(put("/api/v2/cursos/{idCurso}", idCurso)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.nombreCurso").value("Curso Modificado"))
+            .andDo(print());
+
+    }
+
+    @Test
+    void modificarCurso_CursoNoExiste_DeberiaRetornar404() throws Exception {
+        Long idCurso = 999L;
+        Curso cursoEnviado = new Curso();
+        cursoEnviado.setNombreCurso("Curso Inexistente");
+        cursoEnviado.setDescCurso("No existe");
+        cursoEnviado.setCantMaxParticipantes(40);
+        cursoEnviado.setEstadoCurso(true);
+
+        String body = new ObjectMapper().writeValueAsString(cursoEnviado);
+
+        when(cursoService.actualizarCurso(idCurso, cursoEnviado)).thenReturn(null);
+
+        mockMvc.perform(put("/api/v2/cursos/{idCurso}", idCurso)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isNotFound())
+            .andExpect(content().string("CURSO CON ID " + idCurso + " NO ENCONTRADO."))
+            .andDo(print());
+
+    }
+
+    @Test
+    void modificarCurso_DatosInvalidos_DeberiaRetornar400() throws Exception {
+        Long idCurso = 1L;
+        Curso cursoInvalido = new Curso();
+        cursoInvalido.setNombreCurso("");
+        cursoInvalido.setDescCurso("");
+        cursoInvalido.setCantMaxParticipantes(0);
+        cursoInvalido.setEstadoCurso(null);
+
+        String body = new ObjectMapper().writeValueAsString(cursoInvalido);
+
+        mockMvc.perform(put("/api/v2/cursos/{idCurso}", idCurso)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(content().string(org.hamcrest.Matchers.containsString("ERRORES EN LOS DATOS")))
+            .andDo(print());
     }
 
 }

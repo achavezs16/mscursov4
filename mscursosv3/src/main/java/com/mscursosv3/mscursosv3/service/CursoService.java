@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import com.mscursosv3.mscursosv3.dto.CursoDTO;
 import com.mscursosv3.mscursosv3.dto.CursoToCursoDTOConverter;
+import com.mscursosv3.mscursosv3.exception.CursoNoEncontradoException;
 import com.mscursosv3.mscursosv3.model.Curso;
 import com.mscursosv3.mscursosv3.repository.CursoRepository;
 
@@ -24,7 +25,7 @@ public class CursoService {
     public CursoDTO buscarCursoPorId(Long idCurso){
         return cursoRepository.findById(idCurso)
                 .map(cursoToCursoDTOConverter::convert)
-                .orElse(null);
+                .orElseThrow(() -> new CursoNoEncontradoException("Curso consultado no encontrado: " + idCurso));
     }
 
     public List<CursoDTO> listarTodosCursos(){
