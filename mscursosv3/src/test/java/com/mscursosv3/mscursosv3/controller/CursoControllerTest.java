@@ -10,8 +10,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -55,10 +57,22 @@ public class CursoControllerTest {
         when(cursoService.crearCurso(any(Curso.class))).thenReturn(curso1);
 
         //Then
-        mockMvc.perform(post("/api/v2/cursos/creacionCurso")
-                        .content(body)
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());      
+        //mockMvc.perform(post("/api/v2/cursos/creacionCurso1")
+        //               .content(body)
+        //                .contentType(MediaType.APPLICATION_JSON))
+        //        .andExpect(status().isCreated())
+        //        .andDo(print());     
+                
+                
+        MvcResult result = mockMvc.perform(post("/api/v2/cursos/creacionCurso1")
+                    .content(body)
+                    .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isCreated())
+            .andReturn();
+
+            String responseBody = result.getResponse().getContentAsString();
+            System.out.println("Respuesta del controlador: " + responseBody);
+
     }
 
     @Test
@@ -100,7 +114,7 @@ public class CursoControllerTest {
     @Test
     void listarCursos_FullLista_DeberiaRetornarDatos() throws Exception{
 
-        String URI = "/api/v2/cursos/listarCursos";
+        String URI = "/api/v2/cursos/listarCursos1";
 
         CursoDTO cursoDTO1 = new CursoDTO();
         cursoDTO1.setNombreCurso("Desarrollo Fullstack I");
@@ -128,7 +142,8 @@ public class CursoControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].nombreCurso").value("Desarrollo Fullstack I"))
                 .andExpect(jsonPath("$[1].nombreCurso").value("Desarrollo Fullstack II"))
-                .andExpect(jsonPath("$[2].nombreCurso").value("Taller de Proyectos Fullstack"));
+                .andExpect(jsonPath("$[2].nombreCurso").value("Taller de Proyectos Fullstack"))
+                .andDo(print());
 
     }
 

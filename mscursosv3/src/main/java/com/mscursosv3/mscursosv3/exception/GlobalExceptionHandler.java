@@ -15,7 +15,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleCursoNoEncontrado(CursoNoEncontradoException ex){
         Map<String, String> error = new HashMap<>();
         error.put("detalle", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+        return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
     }
 
 }
