@@ -5,6 +5,9 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -15,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -22,6 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mscursosv3.mscursosv3.dto.CursoDTO;
+import com.mscursosv3.mscursosv3.dto.CursoToCursoDTOConverter;
 import com.mscursosv3.mscursosv3.exception.CursoNoEncontradoException;
 import com.mscursosv3.mscursosv3.exception.GlobalExceptionHandler;
 import com.mscursosv3.mscursosv3.model.Curso;
@@ -36,6 +41,9 @@ public class CursoControllerTest {
 
     @MockBean
     private CursoService cursoService;
+
+    @MockBean
+    private CursoToCursoDTOConverter cursoToCursoDTOConverter;
 
     @Test
     void debeRetornarMensajeStatus() throws Exception{
@@ -216,5 +224,51 @@ public class CursoControllerTest {
             .andExpect(content().string(org.hamcrest.Matchers.containsString("ERRORES EN LOS DATOS")))
             .andDo(print());
     }
+
+    @Test
+    void eliminarCurso_Exitoso_DeberiaRetornar200ConCursoEliminado() throws Exception {
+        Long idCurso = 1L;
+
+        //Given
+        Curso curso = new Curso();
+        curso.setIdCurso(idCurso);
+        curso.setNombreCurso("Spring Boot Básico");
+        curso.setDescCurso("Curso introductorio");
+        curso.setCantMaxParticipantes(30);
+        curso.setEstadoCurso(true);
+
+        CursoDTO cursoDTO = new CursoDTO();
+        cursoDTO.setIdCurso(idCurso);
+        cursoDTO.setNombreCurso("Spring Boot Básico");
+        cursoDTO.setDescCurso("Curso introductorio");
+        cursoDTO.setCantMaxParticipantes(30);
+        cursoDTO.setEstadoCurso(true);
+
+        when(cursoService.obtenerCursoPorId(idCurso)).thenReturn(curso);
+        when(cursoToCursoDTOConverter.convert(curso)).thenReturn(cursoDTO);
+
+        mockMvc.perform(delete("/api/v2/cursos/{idCurso}", idCurso))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.mensaje")
+                            .value("Curso eliminado correctamente."))
+                .andExpect(jsonPath("$.cursoEliminado.nombreCurso")
+                            .value("Spring Boot Básico"));
+
+        verify(cursoService).eliminarPorIdCurso(idCurso);  
+    }
+
+    @Test
+    void eliminarCurso_CursoNoExiste_DeberiaRetornar404() throws Exception {
+        Long idCurso = 999L;
+
+        when(cursoService.obtenerCursoPorId(idCurso)).thenReturn(null);
+
+        mockMvc.perform(delete("/api/v2/{idCurso}", idCurso))
+                .andExpect(status().isNotFound())
+                .andExpect(content().string("No se encontró un curso con ID " + idCurso + "."));
+
+        verify(cursoService, never()).eliminarPorIdCurso(anyLong());
+    }
+
 
 }

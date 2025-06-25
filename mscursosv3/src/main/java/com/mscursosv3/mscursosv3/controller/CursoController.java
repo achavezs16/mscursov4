@@ -10,20 +10,20 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.mscursosv3.mscursosv3.dto.CursoDTO;
+import com.mscursosv3.mscursosv3.dto.CursoToCursoDTOConverter;
 import com.mscursosv3.mscursosv3.model.Curso;
 import com.mscursosv3.mscursosv3.service.CursoService;
-import com.mscursosv3.mscursosv3.dto.CursoToCursoDTOConverter;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.PutMapping;
 
 @RestController
 @RequestMapping("api/v2/cursos")
