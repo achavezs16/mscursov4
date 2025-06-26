@@ -1,6 +1,6 @@
 package com.mscursosv3.mscursosv3.repository;
 
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,7 +14,7 @@ public interface CursoRepository extends JpaRepository<Curso, Long>{
     
     Optional<List<Curso>> findByEstadoCurso(Boolean estadoCurso);
     public List<Curso> findByNombreCurso(String nombreCurso);
-    public List<Curso> findByFechaCreacion(Date fechaCreacion);
+    public List<Curso> findByFechaCreacion(LocalDate fechaCreacion);
     
 
 

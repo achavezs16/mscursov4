@@ -380,7 +380,107 @@ public class CursoControllerTest {
     } 
 
     //estado-cursos
+    @Test
+    void estadoCurso_Activos_DeberiaRetornar200ConLista() throws Exception {
+
+        CursoDTO cursoDTO1 = new CursoDTO();
+        CursoDTO cursoDTO2 = new CursoDTO();
+
+        cursoDTO1.setNombreCurso("Fundamento Programacion");
+        cursoDTO1.setDescCurso("Nivel principiante");
+        cursoDTO1.setCantMaxParticipantes(40);
+        cursoDTO1.setEstadoCurso(true);
+
+        cursoDTO2.setNombreCurso("Desarrollo Orientado Objetos");
+        cursoDTO2.setDescCurso("Nivel intermedio");
+        cursoDTO2.setCantMaxParticipantes(32);
+        cursoDTO2.setEstadoCurso(true);
+
+        List<CursoDTO> activos = List.of(cursoDTO1, cursoDTO2);
+
+        when(cursoService.estadoCursos(true)).thenReturn(activos);
+
+        mockMvc.perform(get("/api/v2/cursos/estado-cursos")
+                        .param("estadoCurso", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].nombreCurso").value("Fundamento Programacion"))
+                .andExpect(jsonPath("$[1].nombreCurso").value("Desarrollo Orientado Objetos"))
+                .andDo(print());
+
+    }
+
+    @Test
+    void estadoCurso_Inactivo_DeberiaRetornar200ConLista() throws Exception {
+
+        CursoDTO cursoDTO1 = new CursoDTO();
+        CursoDTO cursoDTO2 = new CursoDTO();
+
+        cursoDTO1.setNombreCurso("Nivelacion Matematica");
+        cursoDTO1.setDescCurso("Curso Nivelacion");
+        cursoDTO1.setCantMaxParticipantes(40);
+        cursoDTO1.setEstadoCurso(false);
+
+        cursoDTO2.setNombreCurso("Algebra Aplicada");
+        cursoDTO2.setDescCurso("Nivel intermedio");
+        cursoDTO2.setCantMaxParticipantes(32);
+        cursoDTO2.setEstadoCurso(false);
+
+        List<CursoDTO> inactivos = List.of(cursoDTO1, cursoDTO2);
+
+        when(cursoService.estadoCursos(false)).thenReturn(inactivos);
+
+        mockMvc.perform(get("/api/v2/cursos/estado-cursos")
+                        .param("estadoCurso", "false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].nombreCurso").value("Nivelacion Matematica"))
+                .andExpect(jsonPath("$[1].nombreCurso").value("Algebra Aplicada"))
+                .andDo(print());
+    }
+
+    @Test
+    void estadoCursoActivo_Vacia_DeberiaRetornar204SinContenido() throws Exception {
+        when(cursoService.estadoCursos(true)).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/api/v2/cursos/estado-cursos")
+                        .param("estadoCurso", "true"))
+                .andExpect(status().isNoContent())
+                .andExpect(content().string(""))
+                .andDo(print());
     
+    }
+
+    @Test
+    void estadoCursoInactivo_Vacia_DeberiaRetornar204SinContenido() throws Exception {
+        when(cursoService.estadoCursos(false)).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/api/v2/cursos/estado-cursos")
+                        .param("estadoCurso", "false"))
+                .andExpect(status().isNoContent())
+                .andExpect(content().string(""))
+                .andDo(print());
+    
+    }
+
+    @Test
+    void estadoCursos_SinParametro_DeberiaRetornar400() throws Exception {
+        mockMvc.perform(get("/api/v2/cursos/estado-cursos"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Debe indicar true para cursos activos y false para cursos inactivos.")))
+                .andDo(print());
+
+    }
+
+    @Test
+    void estadoCursos_ErrorInterno_DeberiaRetornar500() throws Exception {
+        when(cursoService.estadoCursos(true))
+            .thenThrow(new RuntimeException("Falla en BD"));
+        
+        mockMvc.perform(get("/api/v2/cursos/estado-cursos")
+                        .param("estadoCurso", "true"))
+                        .andExpect(status().isInternalServerError())
+                        .andExpect(content().string(org.hamcrest.Matchers.containsString("Error inesperado al filtrar cursos por estado")))
+                        .andDo(print());
+    }
 
 
 }

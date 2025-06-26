@@ -1,6 +1,6 @@
 package com.mscursosv3.mscursosv3.dto;
 
-import java.util.Date;
+import java.time.LocalDate;
 
 import lombok.Data;
 
@@ -11,6 +11,6 @@ public class CursoDTO {
     private String descCurso;
     private int cantMaxParticipantes;
     private Boolean estadoCurso;
-    private Date fechaCreacion;
+    private LocalDate fechaCreacion;
 }
 

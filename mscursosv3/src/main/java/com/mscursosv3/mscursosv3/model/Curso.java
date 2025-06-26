@@ -1,6 +1,6 @@
 package com.mscursosv3.mscursosv3.model;
 
-import java.sql.Date;
+import java.time.LocalDate;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,8 +8,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.persistence.Temporal;
-import jakarta.persistence.TemporalType;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -51,6 +49,5 @@ public class Curso {
     @Column(nullable = false)
     private Boolean estadoCurso;
 
-    @Temporal(TemporalType.DATE)
-    private Date fechaCreacion;
+    private LocalDate fechaCreacion;
 }

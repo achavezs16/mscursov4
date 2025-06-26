@@ -2,8 +2,8 @@ package com.mscursosv3.mscursosv3.service;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
+import java.time.LocalDate;
 
 import org.springframework.stereotype.Service;
 
@@ -80,7 +80,7 @@ public class CursoService {
         return cursoDTOs;
     }
 
-    public List<CursoDTO> cursosCreadosDesde(Date fechaCreacion){
+    public List<CursoDTO> cursosCreadosDesde(LocalDate fechaCreacion){
         List<Curso> listaCurso = cursoRepository.findByFechaCreacion(fechaCreacion);
         List<CursoDTO> cursoDTOs = new ArrayList<>();
 

@@ -1,5 +1,5 @@
 package com.mscursosv3.mscursosv3.controller;
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -134,16 +134,7 @@ public class CursoController {
                     .body("ERROR AL ELIMINAR CURSO: " + e.getMessage());
         }
     }
-
-    //@DeleteMapping("{idCurso}")
-    //public void eliminarCurso(@PathVariable Long idCurso){
-    //    cursoService.eliminarPorIdCurso(idCurso);
-    //}
-
-    //@GetMapping("/estado-cursos")
-    //public List<CursoDTO> estadoCursos(@RequestParam Boolean estadoCurso) {
-        //return cursoService.estadoCursos(estadoCurso);
-    //}
+ 
 
     @GetMapping("/estado-cursos")
     public ResponseEntity<?> obtenerCursosPorEstado(@RequestParam(required = false) Boolean estadoCurso) {
@@ -168,9 +159,25 @@ public class CursoController {
         }
     }
 
-    @GetMapping("/lista-cursos-desde")
-    public List<CursoDTO> listarCursosDesde(@RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd")Date fechaCreacion) {
-        return cursoService.cursosCreadosDesde(fechaCreacion);
-    }
+    //@GetMapping("/lista-cursos-desde")
+    //public List<CursoDTO> listarCursosDesde(@RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd")Date fechaCreacion) {
+        //return cursoService.cursosCreadosDesde(fechaCreacion);
+    //}
     
+    @GetMapping("/lista-cursos-desde")
+    public ResponseEntity<?> listarCursosDesde(@RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate fechaCreacion) {
+        try{
+            List<CursoDTO> cursosDTO = cursoService.cursosCreadosDesde(fechaCreacion);
+
+            if(cursosDTO.isEmpty()){
+                return ResponseEntity.noContent().build();
+            }
+
+            return ResponseEntity.ok(cursosDTO);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("ERROR AL OBTENER CURSOS DESDE: " + e.getMessage());
+        }
+    }
+
 }
