@@ -6,6 +6,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -78,6 +79,52 @@ public class CursoControllerTest {
     }
 
     @Test
+    void inscribirCurso_DatosInvalidos_DeberiaRetornar400() throws Exception {
+
+        Curso cursoInvalido = new Curso();
+        cursoInvalido.setNombreCurso("");
+        cursoInvalido.setDescCurso("Curso sin nombre");
+        cursoInvalido.setCantMaxParticipantes(0);
+        cursoInvalido.setEstadoCurso(null);
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        String body = objectMapper.writeValueAsString(cursoInvalido);
+
+        mockMvc.perform(post("/api/v2/cursos/creacionCurso1")
+                        .content(body)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Errores en los datos: ")))
+                .andDo(print());
+
+
+    }
+
+    @Test
+    void inscribirCurso_ErrorInterno_DeberiaRetornar500() throws Exception {
+
+        Curso cursoValido = new Curso();
+        cursoValido.setNombreCurso("Desarrollo Fullstack III");
+        cursoValido.setDescCurso("Esto es una simulacion");
+        cursoValido.setCantMaxParticipantes(30);
+        cursoValido.setEstadoCurso(true);
+
+        String body = new ObjectMapper().writeValueAsString(cursoValido);
+
+        when(cursoService.crearCurso(any(Curso.class)))
+            .thenThrow(new RuntimeException("Falla en base de datos"));
+
+        mockMvc.perform(post("/api/v2/cursos/creacionCurso1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Error inesperado: ")))
+                .andDo(print());
+
+    }
+
+    //Buscar
+    @Test
     void buscarCurso_DeberiaRetornar200() throws Exception{
 
         //Given
@@ -96,7 +143,7 @@ public class CursoControllerTest {
     }
 
     @Test
-    void buscarCurso_CursoNOEXISTE_DeberiaRetornarNullYMensajeError() throws Exception{
+    void buscarCurso_CursoNOEXISTE_DeberiaRetornar404() throws Exception{
 
         //Given
         Long idCursoInexistente = 999L;
@@ -113,7 +160,24 @@ public class CursoControllerTest {
     }
 
     @Test
-    void listarCursos_FullLista_DeberiaRetornarDatos() throws Exception{
+    void buscarCurso_ErrorInterno_DeberiaRetornar500() throws Exception {
+
+        Long idCurso = 42L;
+
+        when(cursoService.buscarCursoPorId(idCurso))
+                .thenThrow(new RuntimeException("Falla en base de datos"));
+
+        mockMvc.perform(get("/api/v2/cursos/{idCurso}", idCurso)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("ERROR AL BUSCAR EL CURSO")))
+                .andDo(print());
+
+    }
+
+    //Listar
+    @Test
+    void listarCursos_FullLista_DeberiaRetornar200() throws Exception{
 
         String URI = "/api/v2/cursos/listarCursos1";
 
@@ -161,6 +225,8 @@ public class CursoControllerTest {
 
     }
 
+
+    //Actualizar(200, 400, 404, 500)
     @Test
     void modificarCurso_Exitoso_DeberiaRetornar200YCursoActualizado() throws Exception {
         Long idCurso = 1L;
@@ -225,6 +291,33 @@ public class CursoControllerTest {
             .andDo(print());
     }
 
+
+    @Test
+    void modificarCurso_ErrorInterno_DeberiaRetornar500() throws Exception {
+
+        Long idCurso = 7L;
+        Curso cursoValido = new Curso();
+        cursoValido.setNombreCurso("Desarrollo Fullstack II");
+        cursoValido.setDescCurso("Esto es una simulacion");
+        cursoValido.setCantMaxParticipantes(50);
+        cursoValido.setEstadoCurso(false);
+
+        String body = new ObjectMapper().writeValueAsString(cursoValido);
+
+        when(cursoService.actualizarCurso(eq(idCurso), any(Curso.class)))
+                .thenThrow(new RuntimeException("Falla en base de datos"));
+
+        mockMvc.perform(put("/api/v2/cursos/{idCurso}", idCurso)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("ERROR AL ACTUALIZAR EL CURSO")))
+                .andDo(print());
+
+    }
+
+
+    //Eliminar
     @Test
     void eliminarCurso_Exitoso_DeberiaRetornar200ConCursoEliminado() throws Exception {
         Long idCurso = 1L;
@@ -249,6 +342,7 @@ public class CursoControllerTest {
 
         mockMvc.perform(delete("/api/v2/cursos/{idCurso}", idCurso))
                 .andExpect(status().isOk())
+                .andDo(print())
                 .andExpect(jsonPath("$.mensaje")
                             .value("Curso eliminado correctamente."))
                 .andExpect(jsonPath("$.cursoEliminado.nombreCurso")
@@ -263,12 +357,30 @@ public class CursoControllerTest {
 
         when(cursoService.obtenerCursoPorId(idCurso)).thenReturn(null);
 
-        mockMvc.perform(delete("/api/v2/{idCurso}", idCurso))
+        mockMvc.perform(delete("/api/v2/cursos/{idCurso}", idCurso))
                 .andExpect(status().isNotFound())
+                .andDo(print())
                 .andExpect(content().string("No se encontró un curso con ID " + idCurso + "."));
 
         verify(cursoService, never()).eliminarPorIdCurso(anyLong());
     }
+
+    @Test
+    void eliminarCurso_ErrorInterno_DeberiaRetornar500() throws Exception {
+        Long idCurso = 2L;
+
+        when(cursoService.obtenerCursoPorId(idCurso))
+            .thenThrow(new RuntimeException("FALLA EN BD"));
+
+        mockMvc.perform(delete("/api/v2/cursos/{idCurso}", idCurso))
+                .andExpect(status().isInternalServerError())
+                .andDo(print())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("ERROR AL ELIMINAR CURSO")));
+
+    } 
+
+    //estado-cursos
+    
 
 
 }

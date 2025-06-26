@@ -140,9 +140,32 @@ public class CursoController {
     //    cursoService.eliminarPorIdCurso(idCurso);
     //}
 
+    //@GetMapping("/estado-cursos")
+    //public List<CursoDTO> estadoCursos(@RequestParam Boolean estadoCurso) {
+        //return cursoService.estadoCursos(estadoCurso);
+    //}
+
     @GetMapping("/estado-cursos")
-    public List<CursoDTO> estadoCursos(@RequestParam Boolean estadoCurso) {
-        return cursoService.estadoCursos(estadoCurso);
+    public ResponseEntity<?> obtenerCursosPorEstado(@RequestParam(required = false) Boolean estadoCurso) {
+        try{
+            if (estadoCurso == null){
+                return ResponseEntity.badRequest()
+                                    .body("Debe indicar true para cursos activos y false para cursos inactivos.");
+
+            }
+
+            List<CursoDTO> cursos = cursoService.estadoCursos(estadoCurso);
+
+            if(cursos.isEmpty()){
+                return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+            }
+
+            return ResponseEntity.ok(cursos);
+
+        } catch (Exception e){
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body("Error inesperado al filtrar cursos por estado: " + e.getMessage());
+        }
     }
 
     @GetMapping("/lista-cursos-desde")
