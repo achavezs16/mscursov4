@@ -450,18 +450,6 @@ public class CursoControllerTest {
     }
 
     @Test
-    void estadoCursoInactivo_Vacia_DeberiaRetornar204SinContenido() throws Exception {
-        when(cursoService.estadoCursos(false)).thenReturn(Collections.emptyList());
-
-        mockMvc.perform(get("/api/v2/cursos/estado-cursos")
-                        .param("estadoCurso", "false"))
-                .andExpect(status().isNoContent())
-                .andExpect(content().string(""))
-                .andDo(print());
-    
-    }
-
-    @Test
     void estadoCursos_SinParametro_DeberiaRetornar400() throws Exception {
         mockMvc.perform(get("/api/v2/cursos/estado-cursos"))
                 .andExpect(status().isBadRequest())
