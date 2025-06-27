@@ -19,7 +19,7 @@ public class CursoAssembler implements RepresentationModelAssembler<CursoDTO, En
         return EntityModel.of(cursoDTO,
             linkTo(methodOn(CursoController.class).buscarCursoPorId(cursoDTO.getIdCurso())).withSelfRel(),
             linkTo(methodOn(CursoController.class).listarCursos()).withRel("cursos"),
-            linkTo(methodOn(CursoController.class).modificarCurso(cursoDTO.getIdCurso(), null)).withRel("update"),
+            //linkTo(methodOn(CursoController.class).modificarCurso(cursoDTO.getIdCurso(), null)).withRel("update"),
             linkTo(methodOn(CursoController.class).eliminarCurso(cursoDTO.getIdCurso())).withRel("delete")
         
         );

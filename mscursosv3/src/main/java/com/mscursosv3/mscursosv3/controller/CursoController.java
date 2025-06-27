@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
@@ -17,12 +19,22 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.mscursosv3.mscursosv3.assemblers.CursoAssembler;
 import com.mscursosv3.mscursosv3.dto.CursoDTO;
 import com.mscursosv3.mscursosv3.dto.CursoToCursoDTOConverter;
-import com.mscursosv3.mscursosv3.model.Curso;
+import com.mscursosv3.mscursosv3.model.Curso; 
 import com.mscursosv3.mscursosv3.service.CursoService;
 
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,30 +43,51 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 @RequestMapping("api/v2/cursos")
 @RequiredArgsConstructor
+@Tag(name = "Cursos", description = "Operaciones relacionadas con la gestión de Cursos de EduTECH")
 public class CursoController {
 
     private final CursoService cursoService;
     private final CursoToCursoDTOConverter cursoToCursoDTOConverter;
+    private final CursoAssembler cursoAssembler;
 
     @Operation(summary = "Verificar estado de API")
-    @GetMapping()
-    public String getStatus() {
-        return "Gestión de Curso-API está conectado! 🙌";
+    @GetMapping("/status")
+    public ResponseEntity<String> getStatus() {
+        String message = "Gestión de Curso-API está conectado! 🙌";
+        log.info(message);
+        return ResponseEntity.ok(message);
     }
 
-    @Operation(summary = "Listar todos los cursos")
+    @Operation(summary = "Obtiene todos los cursos registrados en sistema", description = "Devuelve listado de cursos activos e inactivos con hipervínculos HATEOAS")
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "Lista capturada", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = CursoDTO.class)))),
+                    @ApiResponse(responseCode = "204", description = "Sin contenidos"), @ApiResponse(responseCode = "500", description = "Error interno")})
     @GetMapping("/listarCursos1")
-    public ResponseEntity<?> listarCursos() {
-        try {
-            List<CursoDTO> cursosDTO = cursoService.listarTodosCursos();
-            if (cursosDTO.isEmpty()) {
-                return ResponseEntity.noContent().build();
-            }
-            return ResponseEntity.ok(cursosDTO);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error al obtener los cursos: " + e.getMessage());
+    public ResponseEntity<CollectionModel<EntityModel<CursoDTO>>> listarCursos() {
+        List<CursoDTO> cursosDTO = cursoService.listarTodosCursos();
+
+        if(cursosDTO.isEmpty()){
+            return ResponseEntity.noContent().build();
         }
+
+        List<EntityModel<CursoDTO>> modelos = cursosDTO.stream()
+                .map(cursoAssembler::toModel)
+                .toList();
+        
+        CollectionModel<EntityModel<CursoDTO>> cursoColeccion = CollectionModel.of(modelos, 
+                linkTo(methodOn(CursoController.class).listarCursos()).withSelfRel());
+        return ResponseEntity.ok(cursoColeccion);
+                
+        
+        //try {
+            //List<CursoDTO> cursosDTO = cursoService.listarTodosCursos();
+            //if (cursosDTO.isEmpty()) {
+                //return ResponseEntity.noContent().build();
+            //}
+            //return ResponseEntity.ok(cursosDTO);
+        //} catch (Exception e) {
+            //return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    //.body("Error al obtener los cursos: " + e.getMessage());
+        //}
     }
     
     @Operation(summary = "Buscar curso por ID")
