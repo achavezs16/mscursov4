@@ -1,9 +1,9 @@
 package com.mscursosv3.mscursosv3.service;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.time.LocalDate;
 
 import org.springframework.stereotype.Service;
 
@@ -62,16 +62,6 @@ public class CursoService {
     public List<CursoDTO> estadoCursos(Boolean estadoCurso){
         List<Curso> listaCurso = cursoRepository.findByEstadoCurso(estadoCurso)
                 .orElse(Collections.emptyList());
-        List<CursoDTO> cursoDTOs = new ArrayList<>();
-
-        for (Curso curso : listaCurso) {
-            cursoDTOs.add(cursoToCursoDTOConverter.convert(curso));
-        }
-        return cursoDTOs;
-    }
-
-    public List<CursoDTO> buscarPorNombre(String nombreCurso){
-        List<Curso> listaCurso = cursoRepository.findByNombreCurso(nombreCurso);
         List<CursoDTO> cursoDTOs = new ArrayList<>();
 
         for (Curso curso : listaCurso) {

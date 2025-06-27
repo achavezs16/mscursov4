@@ -13,7 +13,6 @@ import com.mscursosv3.mscursosv3.model.Curso;
 public interface CursoRepository extends JpaRepository<Curso, Long>{
     
     Optional<List<Curso>> findByEstadoCurso(Boolean estadoCurso);
-    public List<Curso> findByNombreCurso(String nombreCurso);
     public List<Curso> findByFechaCreacion(LocalDate fechaCreacion);
     
 

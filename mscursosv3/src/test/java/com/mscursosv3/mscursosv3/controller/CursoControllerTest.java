@@ -1,5 +1,6 @@
 package com.mscursosv3.mscursosv3.controller;
 
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 
@@ -468,6 +469,60 @@ public class CursoControllerTest {
                         .andExpect(status().isInternalServerError())
                         .andExpect(content().string(org.hamcrest.Matchers.containsString("Error inesperado al filtrar cursos por estado")))
                         .andDo(print());
+    }
+
+    @Test
+    void listarCursosDesde_CursosEncontrados_DeberiaRetornar200ConLista() throws Exception {
+        LocalDate fecha = LocalDate.of(2025, 6, 1);
+        
+        CursoDTO cursoDTO = new CursoDTO();
+        cursoDTO.setIdCurso(1L);
+        cursoDTO.setNombreCurso("Ingles I");
+        cursoDTO.setFechaCreacion(fecha);
+        
+        when(cursoService.cursosCreadosDesde(fecha)).thenReturn(List.of(cursoDTO));
+
+        mockMvc.perform(get("/api/v2/cursos/lista-cursos-desde")
+                .param("fechaCreacion", "2025-06-01")
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].idCurso").value(1))
+            .andExpect(jsonPath("$[0].nombreCurso").value("Ingles I"))
+            .andDo(print());
+
+            verify(cursoService).cursosCreadosDesde(fecha);
+    }
+
+    @Test
+    void listarCursosDesde_SinCursos_DeberiaRetornar204() throws Exception {
+        LocalDate fecha = LocalDate.of(2025, 6, 1);
+
+        when(cursoService.cursosCreadosDesde(fecha)).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/v2/cursos/lista-cursos-desde")
+                .param("fechaCreacion", "2025-06-01")
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isNoContent())
+            .andDo(print());
+
+        verify(cursoService).cursosCreadosDesde(fecha);
+    }
+
+    @Test
+    void listarCursosDesde_ErrorInterno_DeberiaRetornar500() throws Exception {
+        LocalDate fecha = LocalDate.of(2025, 6, 1);
+
+        when(cursoService.cursosCreadosDesde(fecha))
+            .thenThrow(new RuntimeException("Error inesperado"));
+
+        mockMvc.perform(get("/api/v2/cursos/lista-cursos-desde")
+                .param("fechaCreacion", "2025-06-01")
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isInternalServerError())
+            .andExpect(content().string(org.hamcrest.Matchers.containsString("ERROR AL OBTENER CURSOS DESDE")))
+            .andDo(print());
+
+        verify(cursoService).cursosCreadosDesde(fecha);
     }
 
 
