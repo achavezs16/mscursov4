@@ -22,9 +22,12 @@ import com.mscursosv3.mscursosv3.dto.CursoToCursoDTOConverter;
 import com.mscursosv3.mscursosv3.model.Curso;
 import com.mscursosv3.mscursosv3.service.CursoService;
 
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequestMapping("api/v2/cursos")
 @RequiredArgsConstructor
@@ -33,11 +36,13 @@ public class CursoController {
     private final CursoService cursoService;
     private final CursoToCursoDTOConverter cursoToCursoDTOConverter;
 
-    @GetMapping("/status")
+    @Operation(summary = "Verificar estado de API")
+    @GetMapping()
     public String getStatus() {
         return "Gestión de Curso-API está conectado! 🙌";
     }
 
+    @Operation(summary = "Listar todos los cursos")
     @GetMapping("/listarCursos1")
     public ResponseEntity<?> listarCursos() {
         try {
@@ -52,22 +57,14 @@ public class CursoController {
         }
     }
     
-
+    @Operation(summary = "Buscar curso por ID")
     @GetMapping("/{idCurso}")
     public ResponseEntity<?> buscarCursoPorId(@PathVariable Long idCurso) {
-        try {
-            CursoDTO cursosDTO = cursoService.buscarCursoPorId(idCurso);
-            if (cursosDTO == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body("Curso con ID " + idCurso + " no encontrado.");
-            }
-            return ResponseEntity.ok(cursosDTO);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("ERROR AL BUSCAR EL CURSO: " + e.getMessage());
-        }
+        CursoDTO cursoDTO = cursoService.buscarCursoPorId(idCurso);
+        return ResponseEntity.ok(cursoDTO);
     }
 
+    @Operation(summary = "Creacion de curso")
     @PostMapping("/creacionCurso1")
     public ResponseEntity<?> creacionCurso1(@Valid @RequestBody Curso curso, BindingResult result) {
         if (result.hasErrors()) {
@@ -87,6 +84,7 @@ public class CursoController {
         }
     }
     
+    @Operation(summary = "Modificar curso por ID")
     @PutMapping("/{idCurso}")
     public ResponseEntity<?> modificarCurso(@PathVariable Long idCurso, @Valid @RequestBody Curso curso, BindingResult result) {
         if(result.hasErrors()){
@@ -110,6 +108,7 @@ public class CursoController {
         }
     }
 
+    @Operation(summary = "Eliminar curso por ID")
     @DeleteMapping("/{idCurso}")
     public ResponseEntity<?> eliminarCurso(@PathVariable Long idCurso){
         try {
@@ -135,7 +134,7 @@ public class CursoController {
         }
     }
  
-
+    @Operation(summary = "Filtro de cursos activos e inactivos")
     @GetMapping("/estado-cursos")
     public ResponseEntity<?> obtenerCursosPorEstado(@RequestParam(required = false) Boolean estadoCurso) {
         try{
@@ -158,12 +157,8 @@ public class CursoController {
                                 .body("Error inesperado al filtrar cursos por estado: " + e.getMessage());
         }
     }
-
-    //@GetMapping("/lista-cursos-desde")
-    //public List<CursoDTO> listarCursosDesde(@RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd")Date fechaCreacion) {
-        //return cursoService.cursosCreadosDesde(fechaCreacion);
-    //}
     
+    @Operation(summary = "Lista de cursos creados desde cierta fecha")
     @GetMapping("/lista-cursos-desde")
     public ResponseEntity<?> listarCursosDesde(@RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate fechaCreacion) {
         try{
