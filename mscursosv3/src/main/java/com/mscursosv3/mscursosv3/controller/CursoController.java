@@ -29,6 +29,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -76,28 +77,22 @@ public class CursoController {
         CollectionModel<EntityModel<CursoDTO>> cursoColeccion = CollectionModel.of(modelos, 
                 linkTo(methodOn(CursoController.class).listarCursos()).withSelfRel());
         return ResponseEntity.ok(cursoColeccion);
-                
-        
-        //try {
-            //List<CursoDTO> cursosDTO = cursoService.listarTodosCursos();
-            //if (cursosDTO.isEmpty()) {
-                //return ResponseEntity.noContent().build();
-            //}
-            //return ResponseEntity.ok(cursosDTO);
-        //} catch (Exception e) {
-            //return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    //.body("Error al obtener los cursos: " + e.getMessage());
-        //}
     }
     
-    @Operation(summary = "Buscar curso por ID")
+    @Operation(summary = "Buscar curso por ID", description = "Devuelve curso con sus enlaces HATEOAS")
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "Curso encontrado", content = @Content(schema = @Schema(implementation = CursoDTO.class))),
+                    @ApiResponse(responseCode = "404", description = "Curso no encontrado")})
     @GetMapping("/{idCurso}")
-    public ResponseEntity<?> buscarCursoPorId(@PathVariable Long idCurso) {
+    public ResponseEntity<EntityModel<CursoDTO>> buscarCursoPorId(@PathVariable Long idCurso) {
         CursoDTO cursoDTO = cursoService.buscarCursoPorId(idCurso);
-        return ResponseEntity.ok(cursoDTO);
+        EntityModel<CursoDTO> recurso = cursoAssembler.toModel(cursoDTO);
+        return ResponseEntity.ok(recurso);
     }
 
-    @Operation(summary = "Creacion de curso")
+    @Operation(summary = "Creacion de curso", description = "Crea un nuevo curso y retorna sus datos junto a enlaces HATEOAS")
+    @ApiResponses({@ApiResponse(responseCode = "201", description = "Curso creado exitosamente", content = @Content(schema = @Schema(implementation = CursoDTO.class))),
+                    @ApiResponse(responseCode = "400", description = "Datos Inválidos"),
+                    @ApiResponse(responseCode = "500", description = "Error interno. Falla en BD")})
     @PostMapping("/creacionCurso1")
     public ResponseEntity<?> creacionCurso1(@Valid @RequestBody Curso curso, BindingResult result) {
         if (result.hasErrors()) {
@@ -110,14 +105,23 @@ public class CursoController {
 
         try {
             Curso cursoCreado = cursoService.crearCurso(curso);
-            return ResponseEntity.status(HttpStatus.CREATED).body(cursoCreado);
+            CursoDTO cursoDTO = cursoToCursoDTOConverter.convert(cursoCreado);
+            EntityModel<CursoDTO> recurso = cursoAssembler.toModel(cursoDTO);
+
+            return ResponseEntity.created(linkTo(methodOn(CursoController.class).buscarCursoPorId(cursoDTO.getIdCurso())).toUri())
+                                    .body(recurso);
+
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error inesperado: " + e.getMessage());
         }
     }
     
-    @Operation(summary = "Modificar curso por ID")
+    @Operation(summary = "Modificar curso por ID", description = "Actualiza datos de curso y retorna actualización junto a enlaces HATEOAS")
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "Curso Actualizado", content = @Content(schema = @Schema(implementation = CursoDTO.class))),
+                    @ApiResponse(responseCode = "400", description = "Datos inválidos"),
+                    @ApiResponse(responseCode = "404", description = "Curso no encontrado"),
+                    @ApiResponse(responseCode = "500", description = "Error interno. Falla en BD")})
     @PutMapping("/{idCurso}")
     public ResponseEntity<?> modificarCurso(@PathVariable Long idCurso, @Valid @RequestBody Curso curso, BindingResult result) {
         if(result.hasErrors()){
@@ -130,7 +134,9 @@ public class CursoController {
         try {
             Curso cursoActualizado = cursoService.actualizarCurso(idCurso, curso);
             if(cursoActualizado != null){
-                return ResponseEntity.ok(cursoActualizado);
+                CursoDTO cursoDTO = cursoToCursoDTOConverter.convert(cursoActualizado);
+                EntityModel<CursoDTO> recurso = cursoAssembler.toModel(cursoDTO);
+                return ResponseEntity.ok(recurso);
             } else {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body("CURSO CON ID " + idCurso + " NO ENCONTRADO.");
@@ -141,7 +147,10 @@ public class CursoController {
         }
     }
 
-    @Operation(summary = "Eliminar curso por ID")
+    @Operation(summary = "Eliminar curso por ID", description = "Elimina curso existente y retorna su representación con enlaces HATEOAS")
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "Curso Eliminado", content = @Content(schema = @Schema(implementation = CursoDTO.class))),
+                    @ApiResponse(responseCode = "404", description = "Curso no encontrado"),
+                    @ApiResponse(responseCode = "500", description = "Error interno. Falla en BD")})
     @DeleteMapping("/{idCurso}")
     public ResponseEntity<?> eliminarCurso(@PathVariable Long idCurso){
         try {
@@ -154,10 +163,16 @@ public class CursoController {
             CursoDTO cursoDTO = cursoToCursoDTOConverter.convert(curso);
             cursoService.eliminarPorIdCurso(idCurso);
 
+            EntityModel<CursoDTO> recurso = cursoAssembler.toModel(cursoDTO)
+                        .add(linkTo(methodOn(CursoController.class).listarCursos())
+                            .withRel("curso"))
+                        .add(linkTo(methodOn(CursoController.class).creacionCurso1(null, null))
+                            .withRel("create"));
+
             return ResponseEntity.ok().body(
                     Map.of(
                         "mensaje", "Curso eliminado correctamente.",
-                        "cursoEliminado", cursoDTO
+                        "cursoEliminado", recurso
                     )   
             );
 
@@ -167,9 +182,14 @@ public class CursoController {
         }
     }
  
-    @Operation(summary = "Filtro de cursos activos e inactivos")
+    @Operation(summary = "Filtro de cursos activos e inactivos", description = "Retorna todos los cursos activos o inactivos según parámetro entregado")
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "Cursos filtrados por estado", content = @Content(array = @ArraySchema(schema = @Schema(implementation = CursoDTO.class)))),
+                    @ApiResponse(responseCode = "204", description = "No hay cursos con el estado consultado"),
+                    @ApiResponse(responseCode = "400", description = "Falta el parámetro 'estadoCurso'"),
+                    @ApiResponse(responseCode = "500", description = "Error interno. Falla en BD")})
     @GetMapping("/estado-cursos")
-    public ResponseEntity<?> obtenerCursosPorEstado(@RequestParam(required = false) Boolean estadoCurso) {
+    public ResponseEntity<?> obtenerCursosPorEstado(@Parameter(description = "true para cursos activos, false para inactivos", required = true, example = "true")
+                                                    @RequestParam(required = false) Boolean estadoCurso) {
         try{
             if (estadoCurso == null){
                 return ResponseEntity.badRequest()
@@ -183,7 +203,13 @@ public class CursoController {
                 return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
             }
 
-            return ResponseEntity.ok(cursos);
+            List<EntityModel<CursoDTO>> recursos = cursos.stream()
+                        .map(cursoAssembler::toModel)
+                        .toList();
+
+            CollectionModel<EntityModel<CursoDTO>> coleccion = CollectionModel.of(recursos, linkTo(methodOn(CursoController.class).obtenerCursosPorEstado(estadoCurso)).withSelfRel());
+
+            return ResponseEntity.ok(coleccion);
 
         } catch (Exception e){
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -191,7 +217,11 @@ public class CursoController {
         }
     }
     
-    @Operation(summary = "Lista de cursos creados desde cierta fecha")
+    @Operation(summary = "Lista de cursos creados desde cierta fecha", description = "Devuelve todos los cursos cuya 'fechaCreacion' es igual o posterior al parámetro entregado")
+    @ApiResponses({@ApiResponse(responseCode = "200", description = "Curso encontrados", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = CursoDTO.class)))),
+                    @ApiResponse(responseCode = "204", description = "No hay cursos desde la fecha indicada"),
+                    @ApiResponse(responseCode = "400", description = "Parámetro de fecha faltante o con formato incorrecto"),
+                    @ApiResponse(responseCode = "500", description = "Error interno. Falla en BD")})
     @GetMapping("/lista-cursos-desde")
     public ResponseEntity<?> listarCursosDesde(@RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate fechaCreacion) {
         try{
