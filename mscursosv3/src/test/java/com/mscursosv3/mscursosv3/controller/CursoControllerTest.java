@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -27,6 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mscursosv3.mscursosv3.assemblers.CursoAssembler;
 import com.mscursosv3.mscursosv3.dto.CursoDTO;
 import com.mscursosv3.mscursosv3.dto.CursoToCursoDTOConverter;
 import com.mscursosv3.mscursosv3.exception.CursoNoEncontradoException;
@@ -35,7 +37,8 @@ import com.mscursosv3.mscursosv3.model.Curso;
 import com.mscursosv3.mscursosv3.service.CursoService;
 
 @WebMvcTest(CursoController.class)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class,
+        CursoAssembler.class})
 public class CursoControllerTest {
 
     @Autowired
@@ -46,6 +49,7 @@ public class CursoControllerTest {
 
     @MockBean
     private CursoToCursoDTOConverter cursoToCursoDTOConverter;
+
 
     @Test
     void debeRetornarMensajeStatus() throws Exception{
@@ -61,15 +65,24 @@ public class CursoControllerTest {
 
         //Given
         Curso curso1 = new Curso();
+        curso1.setIdCurso(1L);
         curso1.setNombreCurso("Desarrollo FullStack I");
         curso1.setDescCurso("Nivel Principiante");
         curso1.setCantMaxParticipantes(50);
         curso1.setEstadoCurso(true);
 
+        CursoDTO cursoDTO = new CursoDTO();
+        cursoDTO.setIdCurso(1L);
+        cursoDTO.setNombreCurso("Desarrollo FullStack I");
+        cursoDTO.setDescCurso("Nivel Principiante");
+        cursoDTO.setCantMaxParticipantes(50);
+        cursoDTO.setEstadoCurso(true);
+
         ObjectMapper objectMapper = new ObjectMapper();
         String body = objectMapper.writeValueAsString(curso1);
 
         when(cursoService.crearCurso(any(Curso.class))).thenReturn(curso1);
+        when(cursoToCursoDTOConverter.convert(any(Curso.class))).thenReturn(cursoDTO);
 
         //Then
         mockMvc.perform(post("/api/v2/cursos/creacionCurso1")
@@ -164,14 +177,14 @@ public class CursoControllerTest {
     void buscarCurso_ErrorInterno_DeberiaRetornar500() throws Exception {
 
         Long idCurso = 42L;
-
+ 
         when(cursoService.buscarCursoPorId(idCurso))
                 .thenThrow(new RuntimeException("Falla en base de datos"));
 
         mockMvc.perform(get("/api/v2/cursos/{idCurso}", idCurso)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isInternalServerError())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("ERROR AL BUSCAR EL CURSO")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("ERROR AL BUSCAR CURSO: Falla en base de datos")))
                 .andDo(print());
 
     }
@@ -204,11 +217,12 @@ public class CursoControllerTest {
 
         when(cursoService.listarTodosCursos()).thenReturn(cursoDTOLista);
 
-        mockMvc.perform(get(URI))
+        mockMvc.perform(get(URI)
+                .accept(MediaTypes.HAL_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].nombreCurso").value("Desarrollo Fullstack I"))
-                .andExpect(jsonPath("$[1].nombreCurso").value("Desarrollo Fullstack II"))
-                .andExpect(jsonPath("$[2].nombreCurso").value("Taller de Proyectos Fullstack"))
+                .andExpect(jsonPath("$._embedded.cursoDTOList[0].nombreCurso").value("Desarrollo Fullstack I"))
+                .andExpect(jsonPath("$._embedded.cursoDTOList[1].nombreCurso").value("Desarrollo Fullstack II"))
+                .andExpect(jsonPath("$._embedded.cursoDTOList[2].nombreCurso").value("Taller de Proyectos Fullstack"))
                 .andDo(print());
 
     }
@@ -237,10 +251,17 @@ public class CursoControllerTest {
         cursoEnviado.setCantMaxParticipantes(100);
         cursoEnviado.setEstadoCurso(true);
 
+        CursoDTO cursoConvertir = new CursoDTO();
+        cursoConvertir.setNombreCurso("Curso Modificado");
+        cursoConvertir.setDescCurso("Actualizado");
+        cursoConvertir.setCantMaxParticipantes(100);
+        cursoConvertir.setEstadoCurso(true);
+
         ObjectMapper objectMapper = new ObjectMapper();
         String body = objectMapper.writeValueAsString(cursoEnviado);
 
         when(cursoService.actualizarCurso(idCurso, cursoEnviado)).thenReturn(cursoEnviado);
+        when(cursoToCursoDTOConverter.convert(cursoEnviado)).thenReturn(cursoConvertir);
 
         mockMvc.perform(put("/api/v2/cursos/{idCurso}", idCurso)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -404,8 +425,8 @@ public class CursoControllerTest {
         mockMvc.perform(get("/api/v2/cursos/estado-cursos")
                         .param("estadoCurso", "true"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].nombreCurso").value("Fundamento Programacion"))
-                .andExpect(jsonPath("$[1].nombreCurso").value("Desarrollo Orientado Objetos"))
+                .andExpect(jsonPath("$._embedded.cursoDTOList[0].nombreCurso").value("Fundamento Programacion"))
+                .andExpect(jsonPath("$._embedded.cursoDTOList[1].nombreCurso").value("Desarrollo Orientado Objetos"))
                 .andDo(print());
 
     }
@@ -433,8 +454,8 @@ public class CursoControllerTest {
         mockMvc.perform(get("/api/v2/cursos/estado-cursos")
                         .param("estadoCurso", "false"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].nombreCurso").value("Nivelacion Matematica"))
-                .andExpect(jsonPath("$[1].nombreCurso").value("Algebra Aplicada"))
+                .andExpect(jsonPath("$._embedded.cursoDTOList[0].nombreCurso").value("Nivelacion Matematica"))
+                .andExpect(jsonPath("$._embedded.cursoDTOList[1].nombreCurso").value("Algebra Aplicada"))
                 .andDo(print());
     }
 
@@ -484,10 +505,10 @@ public class CursoControllerTest {
 
         mockMvc.perform(get("/api/v2/cursos/lista-cursos-desde")
                 .param("fechaCreacion", "2025-06-01")
-                .contentType(MediaType.APPLICATION_JSON))
+                .contentType(MediaTypes.HAL_JSON))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$[0].idCurso").value(1))
-            .andExpect(jsonPath("$[0].nombreCurso").value("Ingles I"))
+            .andExpect(jsonPath("$._embedded.cursoDTOList[0].idCurso").value(1))
+            .andExpect(jsonPath("$._embedded.cursoDTOList[0].nombreCurso").value("Ingles I"))
             .andDo(print());
 
             verify(cursoService).cursosCreadosDesde(fecha);

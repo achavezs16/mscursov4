@@ -1,11 +1,14 @@
 package com.mscursosv3.mscursosv3.controller;
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
@@ -22,11 +25,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.mscursosv3.mscursosv3.assemblers.CursoAssembler;
 import com.mscursosv3.mscursosv3.dto.CursoDTO;
 import com.mscursosv3.mscursosv3.dto.CursoToCursoDTOConverter;
+import com.mscursosv3.mscursosv3.exception.CursoNoEncontradoException;
 import com.mscursosv3.mscursosv3.model.Curso; 
 import com.mscursosv3.mscursosv3.service.CursoService;
-
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -62,7 +63,7 @@ public class CursoController {
     @Operation(summary = "Obtiene todos los cursos registrados en sistema", description = "Devuelve listado de cursos activos e inactivos con hipervínculos HATEOAS")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "Lista capturada", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = CursoDTO.class)))),
                     @ApiResponse(responseCode = "204", description = "Sin contenidos"), @ApiResponse(responseCode = "500", description = "Error interno")})
-    @GetMapping("/listarCursos1")
+    @GetMapping(value = "/listarCursos1", produces = "application/hal+json")
     public ResponseEntity<CollectionModel<EntityModel<CursoDTO>>> listarCursos() {
         List<CursoDTO> cursosDTO = cursoService.listarTodosCursos();
 
@@ -83,10 +84,17 @@ public class CursoController {
     @ApiResponses({@ApiResponse(responseCode = "200", description = "Curso encontrado", content = @Content(schema = @Schema(implementation = CursoDTO.class))),
                     @ApiResponse(responseCode = "404", description = "Curso no encontrado")})
     @GetMapping("/{idCurso}")
-    public ResponseEntity<EntityModel<CursoDTO>> buscarCursoPorId(@PathVariable Long idCurso) {
-        CursoDTO cursoDTO = cursoService.buscarCursoPorId(idCurso);
-        EntityModel<CursoDTO> recurso = cursoAssembler.toModel(cursoDTO);
-        return ResponseEntity.ok(recurso);
+    public ResponseEntity<?> buscarCursoPorId(@PathVariable Long idCurso) {
+        try{
+            CursoDTO cursoDTO = cursoService.buscarCursoPorId(idCurso);
+            EntityModel<CursoDTO> recurso = cursoAssembler.toModel(cursoDTO);
+            return ResponseEntity.ok(recurso);
+
+        } catch (CursoNoEncontradoException ex) {
+            throw ex;
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("ERROR AL BUSCAR CURSO: " + e.getMessage());
+        }
     }
 
     @Operation(summary = "Creacion de curso", description = "Crea un nuevo curso y retorna sus datos junto a enlaces HATEOAS")
@@ -207,7 +215,8 @@ public class CursoController {
                         .map(cursoAssembler::toModel)
                         .toList();
 
-            CollectionModel<EntityModel<CursoDTO>> coleccion = CollectionModel.of(recursos, linkTo(methodOn(CursoController.class).obtenerCursosPorEstado(estadoCurso)).withSelfRel());
+            CollectionModel<EntityModel<CursoDTO>> coleccion = CollectionModel.of(recursos, 
+                        linkTo(methodOn(CursoController.class).obtenerCursosPorEstado(estadoCurso)).withSelfRel());
 
             return ResponseEntity.ok(coleccion);
 
@@ -223,7 +232,8 @@ public class CursoController {
                     @ApiResponse(responseCode = "400", description = "Parámetro de fecha faltante o con formato incorrecto"),
                     @ApiResponse(responseCode = "500", description = "Error interno. Falla en BD")})
     @GetMapping("/lista-cursos-desde")
-    public ResponseEntity<?> listarCursosDesde(@RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate fechaCreacion) {
+    public ResponseEntity<?> listarCursosDesde(@Parameter(description = "Fecha en formato (yyyy-MM-dd). Ej: 2024-01-01", required = true, example = "2024-01-01")
+        @RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate fechaCreacion) {
         try{
             List<CursoDTO> cursosDTO = cursoService.cursosCreadosDesde(fechaCreacion);
 
@@ -231,10 +241,20 @@ public class CursoController {
                 return ResponseEntity.noContent().build();
             }
 
-            return ResponseEntity.ok(cursosDTO);
+            List<EntityModel<CursoDTO>> recursos = cursosDTO.stream()
+                    .map(cursoAssembler::toModel)
+                    .toList();
 
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("ERROR AL OBTENER CURSOS DESDE: " + e.getMessage());
+            CollectionModel<EntityModel<CursoDTO>> coleccion = CollectionModel.of(recursos, 
+                    linkTo(methodOn(CursoController.class).listarCursosDesde(fechaCreacion)).withSelfRel());
+
+            return ResponseEntity.ok(coleccion);
+
+        }   catch (DateTimeParseException ex){
+                return ResponseEntity.badRequest().body("Formato de fecha incorrecto. Use yyyy-MM-dd.");
+        }
+            catch (Exception e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("ERROR AL OBTENER CURSOS DESDE: " + e.getMessage());
         }
     }
 
